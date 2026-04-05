@@ -164,20 +164,22 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
             strokeWidth="2.5"
           />
           
-          {/* 48个检波器（水听器） - 分组显示 */}
-          {/* 显示代表性的通道，标注总数 */}
+          {/* 48个检波器（水听器） - 显示代表性的16个位置 */}
           {Array.from({ length: 16 }).map((_, i) => {
             const progress = i / 15
             const x = 260 + progress * 520
             const y = 108 + progress * 38 + Math.sin(time * 0.003 + i) * 1.5
-            const channelNum = Math.round(1 + (i / 15) * 47)
+            // 48通道均匀分布，显示的是第1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 48道
+            const channelNum = i === 15 ? 48 : 1 + i * 3
             return (
               <g key={i} transform={`translate(${x}, ${y})`}>
-                <rect x="-6" y="-2.5" width="12" height="5" rx="1.5" fill="#22c55e" stroke="#15803d" strokeWidth="0.8" />
-                <circle cx="0" cy="0" r="1.5" fill="#bbf7d0" />
-                {/* 只显示部分通道号 */}
-                {(i === 0 || i === 5 || i === 10 || i === 15) && (
-                  <text x="0" y="10" textAnchor="middle" fill="#bbf7d0" fontSize="5">CH{channelNum}</text>
+                {/* 水听器图标 - 小圆柱体形状 */}
+                <rect x="-5" y="-3" width="10" height="6" rx="2" fill="#22c55e" stroke="#15803d" strokeWidth="0.8" />
+                {/* 只在关键位置显示通道号 */}
+                {(i === 0 || i === 7 || i === 15) && (
+                  <text x="0" y="12" textAnchor="middle" fill="#86efac" fontSize="6" fontWeight="500">
+                    CH{channelNum}
+                  </text>
                 )}
               </g>
             )
@@ -368,22 +370,22 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
           <text x="20" y="470" fill="#65a30d" fontWeight="500">储层 (含油气)</text>
         </g>
         
-        {/* 信号接收指示 - 48通道选择性显示 */}
+        {/* 信号接收指示 - 反射波到达水听器时的闪烁效果（不显示额外文字避免重复） */}
         {reflectionPhase > 60 && (
           <g>
-            {[0, 3, 6, 9, 12, 15].map((i) => {
+            {[0, 4, 8, 12].map((i) => {
               const progress = i / 15
-              const x = 380 + progress * 400
-              const delay = i * 8
-              if (reflectionPhase < 60 + delay) return null
+              const x = 260 + progress * 520 // 与拖缆位置一致
+              const y = 108 + progress * 38
+              const delay = i * 10
+              if (reflectionPhase < 60 + delay || reflectionPhase > 120 + delay) return null
               return (
                 <g key={i}>
-                  <circle cx={x} cy={125 + progress * 22} r="5" fill="#22c55e" opacity="0.9">
-                    <animate attributeName="r" values="5;8;5" dur="0.3s" repeatCount="1" />
+                  {/* 接收信号的脉冲效果 - 黄色光环 */}
+                  <circle cx={x} cy={y} r="8" fill="none" stroke="#fbbf24" strokeWidth="2" opacity="0.8">
+                    <animate attributeName="r" values="8;14;8" dur="0.4s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.8;0.2;0.8" dur="0.4s" repeatCount="indefinite" />
                   </circle>
-                  <text x={x} y={140 + progress * 22} textAnchor="middle" fill="#22c55e" fontSize="5">
-                    CH{Math.round(1 + (i / 15) * 47)}
-                  </text>
                 </g>
               )
             })}
