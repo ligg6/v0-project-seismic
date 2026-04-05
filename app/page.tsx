@@ -97,32 +97,40 @@ export default function SeismicSurveySimulation() {
             
             {/* 技术说明卡片 */}
             <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700">
-              <h4 className="text-cyan-400 font-semibold mb-3">GI 双腔气枪工作原理</h4>
+              <h4 className="text-cyan-400 font-semibold mb-3">GI 双腔气枪工作原理与气泡振荡</h4>
+              
+              {/* 参数显示 */}
+              <div className="flex gap-4 mb-3 text-xs">
+                <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded">工作压力: 1800 PSI</span>
+                <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded">水深: 60m</span>
+                <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">气泡周期T ≈ 50ms</span>
+              </div>
+              
               <div className="space-y-3 text-sm text-slate-300">
                 <div className="flex gap-3">
                   <span className="text-green-400 font-bold">1.</span>
-                  <p><strong className="text-green-400">充气阶段:</strong> 高压空气同时充入Generator和Injector两个腔体</p>
+                  <p><strong className="text-green-400">主脉冲 (t=0):</strong> Generator放气，气泡急速膨胀，产生主地震脉冲</p>
                 </div>
                 <div className="flex gap-3">
                   <span className="text-yellow-400 font-bold">2.</span>
-                  <p><strong className="text-yellow-400">Generator放气:</strong> 发生器腔首先释放高压气体，产生主地震脉冲，同时形成气泡</p>
+                  <p><strong className="text-yellow-400">气泡膨胀 (0-25ms):</strong> 气泡在约T/2时达到最大半径，此期间Injector注入气体</p>
                 </div>
                 <div className="flex gap-3">
-                  <span className="text-purple-400 font-bold">3.</span>
-                  <p><strong className="text-purple-400">Injector放气:</strong> 在气泡膨胀到最大前，注入器腔延迟释放气体，向气泡内部注入能量</p>
+                  <span className="text-red-400 font-bold">3.</span>
+                  <p><strong className="text-red-400">振荡脉冲 (t≈50ms):</strong> 单腔气枪气泡坍缩到最小时急剧反弹，产生振荡脉冲</p>
                 </div>
                 <div className="flex gap-3">
-                  <span className="text-blue-400 font-bold">4.</span>
-                  <p><strong className="text-blue-400">振荡抑制:</strong> Injector注入的气体有效抑制气泡的二次振荡，使波形更加锐利</p>
+                  <span className="text-purple-400 font-bold">4.</span>
+                  <p><strong className="text-purple-400">GI抑制机制:</strong> Injector注入阻止气泡剧烈坍缩，消除t=50ms, 100ms, 150ms处的振荡</p>
                 </div>
               </div>
               
               <div className="mt-4 pt-3 border-t border-slate-700">
                 <h5 className="text-cyan-300 text-sm font-medium mb-2">关键优势</h5>
                 <ul className="text-xs text-slate-400 space-y-1">
-                  <li>• 更锐利的地震子波，提高垂向分辨率</li>
-                  <li>• 减少气泡效应造成的多次反射干扰</li>
-                  <li>• 适合浅水环境勘探（水深10-100m）</li>
+                  <li>• 消除气泡振荡脉冲，获得锐利地震子波</li>
+                  <li>• 提高浅层分辨率，减少多次波干扰</li>
+                  <li>• 适合浅水环境勘探（水深{60}m级别）</li>
                   <li>• 体积小巧，便于多枪组合使用</li>
                 </ul>
               </div>
@@ -130,9 +138,11 @@ export default function SeismicSurveySimulation() {
           </div>
         </section>
 
-        {/* 底部工作流程时间线 */}
+        {/* 底部工作流程时间线 - 基于50ms气泡周期 */}
         <section className="bg-slate-800/40 rounded-xl p-4 border border-slate-700">
-          <h3 className="text-lg font-semibold text-cyan-400 mb-4 text-center">单次激发工作周期时间线</h3>
+          <h3 className="text-lg font-semibold text-cyan-400 mb-4 text-center">
+            气泡振荡周期时间线 (T ≈ 50ms, 显示200ms过程)
+          </h3>
           
           <div className="relative">
             {/* 时间线 */}
@@ -143,39 +153,52 @@ export default function SeismicSurveySimulation() {
               />
             </div>
             
-            {/* 阶段标记 */}
+            {/* 阶段标记 - 基于50ms气泡周期 */}
             <div className="flex justify-between mt-4 text-xs">
               <div className={`text-center ${phase >= 0 ? 'text-green-400' : 'text-slate-500'}`}>
                 <div className="w-3 h-3 rounded-full bg-green-500 mx-auto mb-1" />
                 <p className="font-medium">0ms</p>
-                <p>充气完成</p>
+                <p>主脉冲</p>
+                <p className="text-slate-500">G放气</p>
               </div>
-              <div className={`text-center ${phase >= 20 ? 'text-yellow-400' : 'text-slate-500'}`}>
-                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 20 ? 'bg-yellow-500' : 'bg-slate-600'}`} />
-                <p className="font-medium">~2ms</p>
-                <p>G放气</p>
-              </div>
-              <div className={`text-center ${phase >= 35 ? 'text-orange-400' : 'text-slate-500'}`}>
-                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 35 ? 'bg-orange-500' : 'bg-slate-600'}`} />
-                <p className="font-medium">~5ms</p>
+              <div className={`text-center ${phase >= 12 ? 'text-yellow-400' : 'text-slate-500'}`}>
+                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 12 ? 'bg-yellow-500' : 'bg-slate-600'}`} />
+                <p className="font-medium">~25ms</p>
                 <p>气泡最大</p>
+                <p className="text-slate-500">I注气</p>
               </div>
-              <div className={`text-center ${phase >= 50 ? 'text-purple-400' : 'text-slate-500'}`}>
-                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 50 ? 'bg-purple-500' : 'bg-slate-600'}`} />
-                <p className="font-medium">~8ms</p>
-                <p>I放气</p>
+              <div className={`text-center ${phase >= 25 ? 'text-red-400' : 'text-slate-500'}`}>
+                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 25 ? 'bg-red-500' : 'bg-slate-600'}`} />
+                <p className="font-medium">~50ms</p>
+                <p>振荡1</p>
+                <p className="text-slate-500">坍缩反弹</p>
               </div>
-              <div className={`text-center ${phase >= 70 ? 'text-blue-400' : 'text-slate-500'}`}>
-                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 70 ? 'bg-blue-500' : 'bg-slate-600'}`} />
-                <p className="font-medium">~15ms</p>
-                <p>坍缩稳定</p>
+              <div className={`text-center ${phase >= 50 ? 'text-orange-400' : 'text-slate-500'}`}>
+                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 50 ? 'bg-orange-500' : 'bg-slate-600'}`} />
+                <p className="font-medium">~100ms</p>
+                <p>振荡2</p>
+                <p className="text-slate-500">第2周期</p>
               </div>
-              <div className={`text-center ${phase >= 90 ? 'text-cyan-400' : 'text-slate-500'}`}>
-                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 90 ? 'bg-cyan-500' : 'bg-slate-600'}`} />
-                <p className="font-medium">~20ms</p>
-                <p>周期结束</p>
+              <div className={`text-center ${phase >= 75 ? 'text-purple-400' : 'text-slate-500'}`}>
+                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 75 ? 'bg-purple-500' : 'bg-slate-600'}`} />
+                <p className="font-medium">~150ms</p>
+                <p>振荡3</p>
+                <p className="text-slate-500">第3周期</p>
+              </div>
+              <div className={`text-center ${phase >= 95 ? 'text-cyan-400' : 'text-slate-500'}`}>
+                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 95 ? 'bg-cyan-500' : 'bg-slate-600'}`} />
+                <p className="font-medium">~200ms</p>
+                <p>衰减</p>
+                <p className="text-slate-500">能量耗散</p>
               </div>
             </div>
+          </div>
+          
+          {/* 说明 */}
+          <div className="mt-4 flex justify-center gap-6 text-xs text-slate-500">
+            <span><span className="text-green-400">绿色</span>: 主脉冲产生</span>
+            <span><span className="text-red-400">红/橙/紫</span>: 单腔气枪振荡脉冲位置</span>
+            <span><span className="text-cyan-400">GI气枪</span>: 振荡被Injector有效抑制</span>
           </div>
         </section>
       </main>
