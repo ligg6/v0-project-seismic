@@ -7,22 +7,38 @@ interface SurveySceneProps {
   time: number // 用于动画
 }
 
+// 参数配置
+const CONFIG = {
+  pressure: 1800, // PSI
+  bubblePeriod: 50, // ms - 气泡振荡周期
+  waterDepth: 60, // m
+  soundSpeed: 1500, // m/s 水中声速
+}
+
 export function SurveyScene({ phase, time }: SurveySceneProps) {
-  // 计算地震波传播
+  // 计算地震波传播 - 基于水深60m
   const waveRadius = useMemo(() => {
-    if (phase < 20) return 0
-    return Math.min(400, (phase - 20) * 8)
+    if (phase < 15) return 0
+    // 波速约1500m/s，60m水深约40ms到达海底
+    return Math.min(450, (phase - 15) * 9)
   }, [phase])
 
-  // 反射波
+  // 反射波 - 从海底返回
   const reflectionPhase = useMemo(() => {
-    if (waveRadius < 150) return 0 // 波还没到海底
-    return Math.min(300, (waveRadius - 150) * 0.8)
+    // 海底位置对应waveRadius约180
+    if (waveRadius < 180) return 0 
+    return Math.min(350, (waveRadius - 180) * 0.9)
   }, [waveRadius])
+
+  // 计算当前时间
+  const currentTime = useMemo(() => {
+    if (phase < 15) return 0
+    return Math.round(((phase - 15) / 85) * 200)
+  }, [phase])
 
   return (
     <div className="bg-gradient-to-b from-sky-200 via-sky-300 to-sky-400 rounded-xl overflow-hidden border border-cyan-500/30">
-      <svg viewBox="0 0 800 500" className="w-full h-auto">
+      <svg viewBox="0 0 800 520" className="w-full h-auto">
         <defs>
           {/* 水面渐变 */}
           <linearGradient id="waterSurface" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -48,12 +64,6 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
             <stop offset="100%" stopColor="#4d7c0f" />
           </linearGradient>
           
-          {/* 波纹效果 */}
-          <filter id="waveFilter">
-            <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" result="noise" />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
-          </filter>
-          
           {/* 发光效果 */}
           <filter id="glowEffect">
             <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
@@ -68,7 +78,7 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
         <rect x="0" y="0" width="800" height="80" fill="#7dd3fc" />
         
         {/* 太阳 */}
-        <circle cx="700" cy="40" r="25" fill="#fbbf24" filter="url(#glowEffect)" />
+        <circle cx="720" cy="40" r="25" fill="#fbbf24" filter="url(#glowEffect)" />
         
         {/* 云 */}
         <g fill="white" opacity="0.8">
@@ -77,8 +87,18 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
           <ellipse cx="300" cy="45" rx="35" ry="12" />
         </g>
         
-        {/* 水面 */}
-        <rect x="0" y="80" width="800" height="200" fill="url(#waterSurface)" />
+        {/* 水面 - 60m水深，按比例显示 */}
+        <rect x="0" y="80" width="800" height="240" fill="url(#waterSurface)" />
+        
+        {/* 水深标尺 */}
+        <g transform="translate(760, 85)">
+          <line x1="0" y1="0" x2="0" y2="230" stroke="white" strokeWidth="1" opacity="0.5" />
+          <line x1="-5" y1="0" x2="5" y2="0" stroke="white" strokeWidth="1" opacity="0.5" />
+          <line x1="-5" y1="230" x2="5" y2="230" stroke="white" strokeWidth="1" opacity="0.5" />
+          <text x="15" y="5" fill="white" fontSize="8">0m</text>
+          <text x="15" y="118" fill="white" fontSize="8">30m</text>
+          <text x="15" y="235" fill="white" fontSize="8">{CONFIG.waterDepth}m</text>
+        </g>
         
         {/* 水面波纹 */}
         <g opacity="0.3">
@@ -114,62 +134,87 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
           <text x="60" y="55" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">SURVEY</text>
         </g>
         
-        {/* 拖缆系统 */}
+        {/* 拖缆系统 - 多通道 */}
         <g>
           {/* 主拖缆 */}
           <path 
-            d={`M 270 100 Q 350 120 450 130 T 650 140 T 780 145`}
+            d={`M 270 100 Q 350 120 450 130 T 650 145 T 780 150`}
             fill="none" 
             stroke="#fbbf24" 
             strokeWidth="3"
             strokeDasharray="10 5"
           />
           
-          {/* 检波器组（水听器） */}
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
-            const x = 300 + i * 60
-            const y = 115 + i * 4 + Math.sin(time * 0.003 + i) * 2
+          {/* 检波器组（水听器） - 多通道 */}
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => {
+            const x = 300 + i * 45
+            const y = 115 + i * 3 + Math.sin(time * 0.003 + i) * 2
             return (
               <g key={i} transform={`translate(${x}, ${y})`}>
                 <rect x="-8" y="-3" width="16" height="6" rx="2" fill="#22c55e" stroke="#15803d" strokeWidth="1" />
                 <circle cx="0" cy="0" r="2" fill="#bbf7d0" />
+                <text x="0" y="12" textAnchor="middle" fill="#bbf7d0" fontSize="5">CH{i+1}</text>
               </g>
             )
           })}
           
           {/* 拖缆标签 */}
-          <text x="500" y="160" textAnchor="middle" fill="#fef3c7" fontSize="10" fontWeight="500">
-            多道拖缆 (水听器阵列)
+          <text x="520" y="170" textAnchor="middle" fill="#fef3c7" fontSize="10" fontWeight="500">
+            多道拖缆 (12通道水听器阵列)
           </text>
         </g>
         
         {/* GI气枪震源 */}
-        <g transform="translate(280, 130)">
-          {/* 气枪本体 */}
-          <rect x="-15" y="-10" width="30" height="20" rx="3" fill="#dc2626" stroke="#991b1b" strokeWidth="2" />
-          <rect x="-10" y="-6" width="8" height="12" fill="#7f1d1d" />
-          <rect x="2" y="-6" width="8" height="12" fill="#450a0a" />
-          <text x="0" y="25" textAnchor="middle" fill="#fca5a5" fontSize="8" fontWeight="bold">GI Airgun</text>
+        <g transform="translate(280, 140)">
+          {/* 气枪本体 - 双腔结构 */}
+          <rect x="-20" y="-12" width="40" height="24" rx="4" fill="#dc2626" stroke="#991b1b" strokeWidth="2" />
+          <rect x="-15" y="-8" width="12" height="16" fill="#7f1d1d" />
+          <text x="-9" y="3" textAnchor="middle" fill="#fca5a5" fontSize="5">G</text>
+          <rect x="3" y="-8" width="12" height="16" fill="#450a0a" />
+          <text x="9" y="3" textAnchor="middle" fill="#fca5a5" fontSize="5">I</text>
+          <text x="0" y="28" textAnchor="middle" fill="#fca5a5" fontSize="8" fontWeight="bold">GI Airgun</text>
+          <text x="0" y="38" textAnchor="middle" fill="#fca5a5" fontSize="6">{CONFIG.pressure} PSI</text>
           
           {/* 气管连接 */}
-          <path d="M 0 -10 Q 0 -25 -10 -35 L -30 -55" fill="none" stroke="#fbbf24" strokeWidth="2" />
+          <path d="M 0 -12 Q 0 -30 -15 -45 L -40 -70" fill="none" stroke="#fbbf24" strokeWidth="2" />
           
-          {/* 气泡效果 */}
-          {phase >= 20 && phase < 80 && (
+          {/* 气泡效果 - 显示膨胀坍缩 */}
+          {phase >= 15 && phase < 85 && (
             <g>
+              {/* 主气泡 */}
+              {(() => {
+                let bubbleR = 0
+                if (phase < 40) {
+                  bubbleR = 8 + (phase - 15) * 0.8
+                } else if (phase < 60) {
+                  bubbleR = 28 - (phase - 40) * 0.5
+                } else {
+                  bubbleR = 18 - (phase - 60) * 0.3
+                }
+                return (
+                  <circle
+                    cx="0"
+                    cy={50 + (phase - 15) * 0.5}
+                    r={Math.max(5, bubbleR)}
+                    fill="#67e8f9"
+                    opacity={0.6 - (phase - 15) / 150}
+                  />
+                )
+              })()}
+              {/* 小气泡 */}
               {[0, 1, 2].map((i) => {
-                const bubblePhase = (phase - 20 + i * 10) % 60
-                if (bubblePhase < 0 || bubblePhase > 40) return null
-                const size = 5 + bubblePhase * 0.8
-                const y = 15 + bubblePhase * 2
+                const bubblePhase = (phase - 15 + i * 8) % 50
+                if (bubblePhase > 35) return null
+                const size = 3 + bubblePhase * 0.3
+                const y = 45 + bubblePhase * 2
                 return (
                   <circle
                     key={i}
-                    cx={-5 + i * 5}
+                    cx={-6 + i * 6}
                     cy={y}
                     r={size}
                     fill="#67e8f9"
-                    opacity={0.6 - bubblePhase / 80}
+                    opacity={0.5 - bubblePhase / 80}
                   />
                 )
               })}
@@ -177,16 +222,16 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
           )}
         </g>
         
-        {/* 地震波传播 */}
+        {/* 地震波传播 - 下行波 */}
         {waveRadius > 0 && (
-          <g opacity={Math.max(0.1, 1 - waveRadius / 500)}>
+          <g opacity={Math.max(0.1, 1 - waveRadius / 550)}>
             {[0.3, 0.6, 0.9].map((scale, i) => (
               <ellipse
                 key={i}
                 cx="280"
-                cy="135"
+                cy="145"
                 rx={waveRadius * scale}
-                ry={waveRadius * scale * 0.6}
+                ry={waveRadius * scale * 0.55}
                 fill="none"
                 stroke="#22d3ee"
                 strokeWidth={2 - i * 0.5}
@@ -196,38 +241,61 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
           </g>
         )}
         
-        {/* 海底 */}
+        {/* 气泡振荡产生的次生波 - 50ms周期后 */}
+        {phase >= 45 && phase < 75 && (
+          <g opacity={(75 - phase) / 30 * 0.5}>
+            {[0.2, 0.4].map((scale, i) => (
+              <ellipse
+                key={`bubble-wave-${i}`}
+                cx="280"
+                cy="145"
+                rx={(phase - 45) * 4 * scale}
+                ry={(phase - 45) * 4 * scale * 0.5}
+                fill="none"
+                stroke="#f97316"
+                strokeWidth={1}
+                strokeDasharray="4 2"
+                opacity={0.5 - i * 0.2}
+              />
+            ))}
+            <text x="320" y={145 + (phase - 45) * 2} fill="#f97316" fontSize="7" opacity="0.7">
+              气泡振荡波 (t≈{CONFIG.bubblePeriod}ms)
+            </text>
+          </g>
+        )}
+        
+        {/* 海底 - 60m深度 */}
         <path 
-          d="M 0 280 Q 100 290 200 285 T 400 295 T 600 280 T 800 290 L 800 500 L 0 500 Z" 
+          d="M 0 320 Q 100 330 200 325 T 400 335 T 600 320 T 800 330 L 800 520 L 0 520 Z" 
           fill="url(#seabedGradient)" 
         />
         
         {/* 地层1 */}
         <path 
-          d="M 0 330 Q 150 340 300 335 T 550 345 T 800 340 L 800 500 L 0 500 Z" 
+          d="M 0 370 Q 150 380 300 375 T 550 385 T 800 380 L 800 520 L 0 520 Z" 
           fill="url(#layer1)" 
         />
         
         {/* 地层2 - 含油气层（目标层） */}
         <path 
-          d="M 0 400 Q 200 390 350 395 T 600 385 T 800 395 L 800 500 L 0 500 Z" 
+          d="M 0 440 Q 200 430 350 435 T 600 425 T 800 435 L 800 520 L 0 520 Z" 
           fill="url(#layer2)" 
         />
         
         {/* 油气藏标示 */}
-        <ellipse cx="450" cy="420" rx="80" ry="25" fill="#fbbf24" opacity="0.4" />
-        <text x="450" y="425" textAnchor="middle" fill="#fef3c7" fontSize="10" fontWeight="bold">油气藏</text>
+        <ellipse cx="450" cy="460" rx="80" ry="25" fill="#fbbf24" opacity="0.4" />
+        <text x="450" y="465" textAnchor="middle" fill="#fef3c7" fontSize="10" fontWeight="bold">油气藏</text>
         
         {/* 反射波 */}
-        {reflectionPhase > 0 && reflectionPhase < 200 && (
-          <g opacity={Math.max(0.1, 1 - reflectionPhase / 250)}>
+        {reflectionPhase > 0 && reflectionPhase < 250 && (
+          <g opacity={Math.max(0.1, 1 - reflectionPhase / 300)}>
             {[0.3, 0.6, 0.9].map((scale, i) => (
               <ellipse
                 key={i}
-                cx="350"
-                cy="285"
+                cx="380"
+                cy="325"
                 rx={reflectionPhase * scale}
-                ry={reflectionPhase * scale * 0.4}
+                ry={reflectionPhase * scale * 0.35}
                 fill="none"
                 stroke="#f97316"
                 strokeWidth={1.5 - i * 0.3}
@@ -239,60 +307,64 @@ export function SurveyScene({ phase, time }: SurveySceneProps) {
         )}
         
         {/* 射线路径标注 */}
-        {phase >= 30 && phase < 80 && (
+        {phase >= 25 && phase < 85 && (
           <g opacity="0.6">
             {/* 入射波 */}
-            <line x1="280" y1="135" x2="350" y2="285" stroke="#22d3ee" strokeWidth="1" strokeDasharray="4" />
+            <line x1="280" y1="145" x2="380" y2="325" stroke="#22d3ee" strokeWidth="1" strokeDasharray="4" />
             {/* 反射波 */}
-            <line x1="350" y1="285" x2="450" y2="135" stroke="#f97316" strokeWidth="1" strokeDasharray="4" />
+            <line x1="380" y1="325" x2="500" y2="140" stroke="#f97316" strokeWidth="1" strokeDasharray="4" />
             {/* 标注 */}
-            <text x="300" y="210" fill="#22d3ee" fontSize="8" transform="rotate(50, 300, 210)">入射波</text>
-            <text x="420" y="200" fill="#f97316" fontSize="8" transform="rotate(-45, 420, 200)">反射波</text>
+            <text x="310" y="240" fill="#22d3ee" fontSize="8" transform="rotate(55, 310, 240)">入射波</text>
+            <text x="460" y="220" fill="#f97316" fontSize="8" transform="rotate(-50, 460, 220)">反射波</text>
           </g>
         )}
         
         {/* 标注说明 */}
         <g fill="white" fontSize="10">
-          <text x="20" y="95" fill="#0369a1" fontWeight="500">水深: ~30m (浅水)</text>
-          <text x="20" y="300" fill="#92400e" fontWeight="500">海底沉积层</text>
-          <text x="20" y="360" fill="#a16207" fontWeight="500">地层界面1</text>
-          <text x="20" y="430" fill="#65a30d" fontWeight="500">储层 (含油气)</text>
+          <text x="20" y="95" fill="#0369a1" fontWeight="500">水面</text>
+          <text x="20" y="200" fill="#0c4a6e" fontWeight="500">浅水层 (水深{CONFIG.waterDepth}m)</text>
+          <text x="20" y="340" fill="#92400e" fontWeight="500">海底沉积层</text>
+          <text x="20" y="400" fill="#a16207" fontWeight="500">地层界面1</text>
+          <text x="20" y="470" fill="#65a30d" fontWeight="500">储层 (含油气)</text>
         </g>
         
         {/* 信号接收指示 */}
-        {reflectionPhase > 100 && (
+        {reflectionPhase > 80 && (
           <g>
-            {[0, 1, 2, 3].map((i) => {
-              const x = 400 + i * 60
-              const delay = i * 15
-              if (reflectionPhase < 100 + delay) return null
+            {[0, 1, 2, 3, 4, 5].map((i) => {
+              const x = 420 + i * 45
+              const delay = i * 12
+              if (reflectionPhase < 80 + delay) return null
               return (
                 <g key={i}>
-                  <circle cx={x} cy={125 + i * 3} r="4" fill="#22c55e" opacity="0.8">
-                    <animate attributeName="r" values="4;8;4" dur="0.5s" repeatCount="1" />
+                  <circle cx={x} cy={128 + i * 2} r="5" fill="#22c55e" opacity="0.8">
+                    <animate attributeName="r" values="5;9;5" dur="0.4s" repeatCount="1" />
                   </circle>
+                  <text x={x} y={145 + i * 2} textAnchor="middle" fill="#22c55e" fontSize="6">接收</text>
                 </g>
               )
             })}
           </g>
         )}
         
-        {/* 图例 */}
-        <g transform="translate(620, 20)">
-          <rect x="0" y="0" width="170" height="100" rx="5" fill="rgba(15, 23, 42, 0.8)" />
-          <text x="85" y="18" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">图例说明</text>
+        {/* 时间和状态显示 */}
+        <g transform="translate(620, 10)">
+          <rect x="0" y="0" width="170" height="115" rx="5" fill="rgba(15, 23, 42, 0.85)" />
+          <text x="85" y="18" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">勘探参数</text>
           
-          <circle cx="15" cy="35" r="4" fill="#dc2626" />
-          <text x="25" y="38" fill="white" fontSize="8">GI双腔气枪震源</text>
+          <text x="10" y="35" fill="#fbbf24" fontSize="8">气枪压力: {CONFIG.pressure} PSI</text>
+          <text x="10" y="48" fill="#22d3ee" fontSize="8">水深: {CONFIG.waterDepth}m</text>
+          <text x="10" y="61" fill="#a855f7" fontSize="8">气泡周期: {CONFIG.bubblePeriod}ms</text>
+          <text x="10" y="74" fill="#94a3b8" fontSize="8">声速: {CONFIG.soundSpeed}m/s</text>
+          <text x="10" y="87" fill="#67e8f9" fontSize="8">当前时间: {currentTime}ms</text>
           
-          <line x1="10" y1="50" x2="25" y2="50" stroke="#22d3ee" strokeWidth="2" />
-          <text x="30" y="53" fill="white" fontSize="8">下行地震波</text>
+          <line x1="10" y1="93" x2="160" y2="93" stroke="#475569" strokeWidth="1" />
           
-          <line x1="10" y1="65" x2="25" y2="65" stroke="#f97316" strokeWidth="2" strokeDasharray="3" />
-          <text x="30" y="68" fill="white" fontSize="8">反射波</text>
+          <circle cx="20" cy="105" r="4" fill="#dc2626" />
+          <text x="30" y="108" fill="white" fontSize="7">GI气枪震源</text>
           
-          <rect x="10" y="77" width="15" height="6" rx="2" fill="#22c55e" />
-          <text x="30" y="83" fill="white" fontSize="8">水听器 (检波器)</text>
+          <rect x="90" y="101" width="12" height="6" rx="2" fill="#22c55e" />
+          <text x="107" y="108" fill="white" fontSize="7">水听器</text>
         </g>
       </svg>
     </div>

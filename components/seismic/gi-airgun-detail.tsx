@@ -1,53 +1,73 @@
 "use client"
 
-import { useEffect, useState } from "react"
-
 interface GIAirgunDetailProps {
   phase: number // 0-100 表示工作周期进度
 }
 
+// 参数配置
+const CONFIG = {
+  pressure: 1800, // PSI
+  bubblePeriod: 50, // ms - 气泡振荡周期
+  waterDepth: 60, // m
+}
+
 export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
   // 根据相位计算各部分状态
-  // 0-20: Generator充气完成，等待触发
-  // 20-30: Generator放气，产生主脉冲
-  // 30-50: 气泡膨胀，Injector等待
-  // 50-60: Injector放气，抑制气泡振荡
-  // 60-100: 气泡坍缩，系统复位
+  // 0-15: Generator充气完成，等待触发
+  // 15-25: Generator放气，产生主脉冲
+  // 25-40: 气泡膨胀，Injector等待（约25ms后）
+  // 40-50: Injector放气，抑制气泡振荡（在50ms气泡周期处）
+  // 50-100: 气泡坍缩，系统复位
 
   const getGeneratorPressure = () => {
-    if (phase < 20) return 100
-    if (phase < 30) return 100 - (phase - 20) * 10
+    if (phase < 15) return 100
+    if (phase < 25) return 100 - (phase - 15) * 10
     return 0
   }
 
   const getInjectorPressure = () => {
-    if (phase < 50) return 100
-    if (phase < 60) return 100 - (phase - 50) * 10
+    if (phase < 40) return 100
+    if (phase < 50) return 100 - (phase - 40) * 10
     return 0
   }
 
   const getBubbleSize = () => {
-    if (phase < 20) return 0
-    if (phase < 50) return Math.min(1, (phase - 20) / 30) // 膨胀
-    if (phase < 60) return 1 // 保持
-    return Math.max(0.2, 1 - (phase - 60) / 40) // 坍缩
+    if (phase < 15) return 0
+    if (phase < 40) return Math.min(1, (phase - 15) / 25) // 膨胀
+    if (phase < 50) return 1 // 保持
+    return Math.max(0.15, 1 - (phase - 50) / 50) // 坍缩
   }
 
   const generatorPressure = getGeneratorPressure()
   const injectorPressure = getInjectorPressure()
   const bubbleSize = getBubbleSize()
 
+  // 计算当前时间（毫秒）
+  const getCurrentTime = () => {
+    if (phase < 15) return 0
+    // 总周期约200ms，phase 15-100对应0-200ms
+    return Math.round(((phase - 15) / 85) * 200)
+  }
+
   const getPhaseDescription = () => {
-    if (phase < 20) return "充气阶段 - 高压气体充入双腔"
-    if (phase < 30) return "发生器放气 - 产生主地震脉冲"
-    if (phase < 50) return "气泡膨胀 - 注入器等待最佳时机"
-    if (phase < 60) return "注入器放气 - 抑制气泡振荡"
-    return "气泡坍缩 - 系统复位准备下一周期"
+    const time = getCurrentTime()
+    if (phase < 15) return `充气阶段 - ${CONFIG.pressure} PSI 高压气体充入双腔`
+    if (phase < 25) return `Generator放气 - 产生主地震脉冲 (t=${time}ms)`
+    if (phase < 40) return `气泡膨胀 - 等待${CONFIG.bubblePeriod}ms周期 (t=${time}ms)`
+    if (phase < 50) return `Injector放气 - 抑制气泡振荡 (t≈${CONFIG.bubblePeriod}ms)`
+    return `气泡坍缩 - 系统复位 (t=${time}ms)`
   }
 
   return (
     <div className="bg-slate-900 rounded-xl p-4 border border-cyan-500/30">
-      <h3 className="text-cyan-400 font-semibold mb-3 text-center">GI Mini Airgun 双腔气枪结构</h3>
+      <h3 className="text-cyan-400 font-semibold mb-2 text-center">GI Mini Airgun 双腔气枪结构</h3>
+      
+      {/* 参数显示 */}
+      <div className="flex justify-center gap-4 mb-3 text-xs">
+        <span className="text-amber-400">压力: {CONFIG.pressure} PSI</span>
+        <span className="text-cyan-400">气泡周期: {CONFIG.bubblePeriod}ms</span>
+        <span className="text-blue-400">水深: {CONFIG.waterDepth}m</span>
+      </div>
       
       <svg viewBox="0 0 400 300" className="w-full h-auto">
         {/* 背景水域 */}
@@ -91,7 +111,7 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
                   fill={generatorPressure > 50 ? "#22c55e" : "#ef4444"} 
                   className="transition-all duration-200" />
             <text x="60" y="55" textAnchor="middle" fill="white" fontSize="8">
-              {Math.round(generatorPressure)}%
+              {Math.round(generatorPressure * CONFIG.pressure / 100)} PSI
             </text>
           </g>
           
@@ -108,7 +128,7 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
                   fill={injectorPressure > 50 ? "#3b82f6" : "#f97316"} 
                   className="transition-all duration-200" />
             <text x="180" y="55" textAnchor="middle" fill="white" fontSize="8">
-              {Math.round(injectorPressure)}%
+              {Math.round(injectorPressure * CONFIG.pressure / 100)} PSI
             </text>
           </g>
           
@@ -117,11 +137,19 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
           <line x1="180" y1="0" x2="180" y2="-20" stroke="#fbbf24" strokeWidth="3" />
           <line x1="60" y1="-20" x2="180" y2="-20" stroke="#fbbf24" strokeWidth="3" />
           <line x1="120" y1="-20" x2="120" y2="-35" stroke="#fbbf24" strokeWidth="3" />
-          <text x="120" y="-40" textAnchor="middle" fill="#fbbf24" fontSize="9">高压气源</text>
+          <text x="120" y="-40" textAnchor="middle" fill="#fbbf24" fontSize="9">高压气源 {CONFIG.pressure} PSI</text>
           
           {/* 放气口 */}
-          <rect x="55" y="80" width="10" height="15" fill={phase >= 20 && phase < 30 ? "#ef4444" : "#374151"} />
-          <rect x="175" y="80" width="10" height="15" fill={phase >= 50 && phase < 60 ? "#3b82f6" : "#374151"} />
+          <rect x="55" y="80" width="10" height="15" fill={phase >= 15 && phase < 25 ? "#ef4444" : "#374151"} />
+          <rect x="175" y="80" width="10" height="15" fill={phase >= 40 && phase < 50 ? "#3b82f6" : "#374151"} />
+          
+          {/* 放气口标签 */}
+          {phase >= 15 && phase < 25 && (
+            <text x="60" y="108" textAnchor="middle" fill="#ef4444" fontSize="7">放气中</text>
+          )}
+          {phase >= 40 && phase < 50 && (
+            <text x="180" y="108" textAnchor="middle" fill="#3b82f6" fontSize="7">注气中</text>
+          )}
         </g>
         
         {/* 气泡 */}
@@ -142,18 +170,22 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
               r={5 + bubbleSize * 10} 
               fill="rgba(255,255,255,0.3)"
             />
+            {/* 气泡尺寸标注 */}
+            <text x="200" y={205 + (1 - bubbleSize) * 20} textAnchor="middle" fill="white" fontSize="8">
+              R={((bubbleSize * 0.3) + 0.05).toFixed(2)}m
+            </text>
           </g>
         )}
         
         {/* 地震波 - 从放气口发出 */}
-        {phase >= 20 && phase < 40 && (
-          <g opacity={(40 - phase) / 20}>
+        {phase >= 15 && phase < 35 && (
+          <g opacity={(35 - phase) / 20}>
             {[1, 2, 3].map((i) => (
               <circle
                 key={i}
                 cx="200"
                 cy="175"
-                r={20 + (phase - 20) * 3 * i}
+                r={20 + (phase - 15) * 3 * i}
                 fill="none"
                 stroke="#22d3ee"
                 strokeWidth="1.5"
@@ -164,14 +196,14 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
         )}
         
         {/* Injector波 */}
-        {phase >= 50 && phase < 70 && (
-          <g opacity={(70 - phase) / 20}>
+        {phase >= 40 && phase < 60 && (
+          <g opacity={(60 - phase) / 20}>
             {[1, 2].map((i) => (
               <circle
                 key={i}
                 cx="200"
                 cy="175"
-                r={10 + (phase - 50) * 2 * i}
+                r={10 + (phase - 40) * 2 * i}
                 fill="none"
                 stroke="#a855f7"
                 strokeWidth="1"
@@ -181,9 +213,24 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
           </g>
         )}
         
+        {/* 时间轴 */}
+        <g transform="translate(50, 270)">
+          <line x1="0" y1="0" x2="300" y2="0" stroke="#475569" strokeWidth="1" />
+          {[0, 50, 100, 150, 200].map((t, i) => (
+            <g key={i} transform={`translate(${t * 1.5}, 0)`}>
+              <line x1="0" y1="-3" x2="0" y2="3" stroke="#475569" strokeWidth="1" />
+              <text x="0" y="12" textAnchor="middle" fill="#64748b" fontSize="7">{t}ms</text>
+            </g>
+          ))}
+          {/* 当前时间指示器 */}
+          {phase >= 15 && (
+            <circle cx={getCurrentTime() * 1.5} cy="0" r="4" fill="#22d3ee" />
+          )}
+        </g>
+        
         {/* 标签 */}
         <g>
-          <text x="200" y="285" textAnchor="middle" fill="#e2e8f0" fontSize="11" fontWeight="500">
+          <text x="200" y="252" textAnchor="middle" fill="#e2e8f0" fontSize="10" fontWeight="500">
             {getPhaseDescription()}
           </text>
         </g>
@@ -191,9 +238,9 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
       
       {/* 工作原理说明 */}
       <div className="mt-3 text-xs text-slate-400 space-y-1">
-        <p><span className="text-green-400">●</span> Generator腔: 产生主地震脉冲</p>
-        <p><span className="text-blue-400">●</span> Injector腔: 延迟注气抑制气泡振荡</p>
-        <p><span className="text-cyan-400">●</span> 气泡: 双腔协同控制，获得锐利子波</p>
+        <p><span className="text-green-400">●</span> Generator腔: t=0 产生主地震脉冲</p>
+        <p><span className="text-blue-400">●</span> Injector腔: t≈{CONFIG.bubblePeriod}ms 注气抑制气泡振荡</p>
+        <p><span className="text-cyan-400">●</span> 气泡周期: 约{CONFIG.bubblePeriod}ms (水深{CONFIG.waterDepth}m)</p>
       </div>
     </div>
   )
