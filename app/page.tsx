@@ -57,8 +57,8 @@ export default function SeismicSurveySimulation() {
             GI Mini Airgun 双腔气枪震源工作原理动态演示
           </h2>
           <p className="text-center text-slate-400 text-sm mt-2 max-w-2xl mx-auto">
-            Generator-Injector (GI) 气枪通过双腔协同工作，有效抑制气泡振荡效应，
-            产生锐利、高分辨率的地震子波，提高浅水勘探的分辨能力
+            48通道多道拖缆系统配合 Generator-Injector (GI) 双腔气枪震源，
+            有效抑制气泡振荡效应，产生锐利地震子波，提高60m浅水勘探的分辨能力
           </p>
         </div>
       </header>
@@ -100,10 +100,11 @@ export default function SeismicSurveySimulation() {
               <h4 className="text-cyan-400 font-semibold mb-3">GI 双腔气枪工作原理与气泡振荡</h4>
               
               {/* 参数显示 */}
-              <div className="flex gap-4 mb-3 text-xs">
+              <div className="flex flex-wrap gap-2 mb-3 text-xs">
                 <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded">工作压力: 1800 PSI</span>
                 <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded">水深: 60m</span>
                 <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">气泡周期T ≈ 50ms</span>
+                <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded">48通道拖缆</span>
               </div>
               
               <div className="space-y-3 text-sm text-slate-300">
