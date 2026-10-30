@@ -40,15 +40,21 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
     const damping = Math.pow(0.65, cycleNumber)
     
     // 最大和最小半径（归一化）
+    // 每个周期的起点半径 = 上一周期终点的最小半径，保证跨周期连续；
+    // t=0 时与GI气枪相同，从0.1开始膨胀
+    const getRmin = (n: number) => (n === 0 ? 0.1 : 0.15 * Math.pow(0.65, n) + 0.1) // 最小半径不会完全为0
     const Rmax = 1.0 * damping
-    const Rmin = 0.15 * damping + 0.1 // 最小半径不会完全为0
+    const Rstart = getRmin(cycleNumber)
+    const Rend = getRmin(cycleNumber + 1)
     
-    // 使用正弦函数模拟气泡半径变化
-    // 在 t=0 时半径最小（刚释放），t=T/2 时最大，t=T 时又回到最小
-    const phaseAngle = (timeInCycle / T) * 2 * Math.PI
-    const radius = (Rmax + Rmin) / 2 + ((Rmax - Rmin) / 2) * Math.sin(phaseAngle - Math.PI / 2)
+    // 使用余弦函数模拟气泡半径变化
+    // 周期起点半径最小，T/2 时最大，T 时回到（下一周期的）最小
+    const s = (1 - Math.cos((timeInCycle / T) * 2 * Math.PI)) / 2
+    const radius = timeInCycle < T / 2
+      ? Rstart + (Rmax - Rstart) * s
+      : Rend + (Rmax - Rend) * s
     
-    return Math.max(0.1, radius)
+    return radius
   }
 
   // GI双腔气枪气泡半径 - Injector抑制振荡
@@ -72,7 +78,7 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
     
     // 后续：气泡平稳衰减，只有微小波动
     const decayTime = t - T
-    const baseRadius = 0.85 * Math.exp(-decayTime / 150) + 0.15
+    const baseRadius = 0.70 * Math.exp(-decayTime / 150) + 0.15 // t=T 时为0.85，与收缩段末端连续
     const microWave = 0.03 * Math.sin(2 * Math.PI * decayTime / 40) * Math.exp(-decayTime / 100)
     
     return Math.max(0.15, baseRadius + microWave)
@@ -80,14 +86,26 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
 
   // 压力脉冲计算 - 与气泡体积加速度相关 P ∝ d²V/dt²
   // 脉冲在气泡急剧变化时产生：1)初始膨胀 2)坍缩反弹点
+  // 气泡接近最大半径时（脉冲后约T/2）体积减速膨胀/开始收缩，d²V/dt² < 0 → 宽缓的负压（低于静水压）波瓣
+  const getNegativeLobe = (t: number, amplitude: number, decay: number): number => {
+    const T = CONFIG.bubblePeriod
+    let lobe = 0
+    for (let n = 0; n <= 3; n++) {
+      const center = (n + 0.5) * T
+      lobe -= amplitude * Math.pow(decay, n) * Math.exp(-Math.pow((t - center) / 9, 2))
+    }
+    return lobe
+  }
+
   const getSingleGunPressure = (t: number): number => {
     if (t < 0) return 0
     
     const T = CONFIG.bubblePeriod
+    const lobe = getNegativeLobe(t, 0.22, 0.6)
     
     // 主脉冲 - t=0附近，气泡开始急速膨胀
     if (t < 8) {
-      return 1.0 * Math.exp(-t / 3)
+      return 1.0 * Math.exp(-t / 3) + lobe
     }
     
     // 气泡振荡脉冲 - 在每个周期的坍缩反弹点 (t = nT)
@@ -96,28 +114,31 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
       const distance = Math.abs(t - pulseTime)
       if (distance < 8) {
         const damping = Math.pow(0.6, n)
-        return damping * 0.75 * Math.exp(-distance / 3)
+        return damping * 0.75 * Math.exp(-distance / 3) + lobe
       }
     }
     
-    return 0.02
+    return lobe
   }
 
   const getGIPressure = (t: number): number => {
     if (t < 0) return 0
     
+    // GI气枪负压波瓣较小（Injector注气阻止气泡剧烈坍缩）
+    const lobe = getNegativeLobe(t, 0.08, 0.4)
+    
     // 主脉冲 - 与单腔相同
     if (t < 8) {
-      return 1.0 * Math.exp(-t / 3)
+      return 1.0 * Math.exp(-t / 3) + lobe
     }
     
     // GI气枪几乎没有振荡脉冲，只有微弱残余
     const T = CONFIG.bubblePeriod
     if (Math.abs(t - T) < 8) {
-      return 0.1 * Math.exp(-Math.abs(t - T) / 4)
+      return 0.1 * Math.exp(-Math.abs(t - T) / 4) + lobe
     }
     
-    return 0.01
+    return lobe
   }
 
   // 当前气泡状态
@@ -179,7 +200,7 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
       const x = 30 + (i / 200) * chartWidth
       
       // 只绘制到当前时间
-      if (t <= currentTime + 5) {
+      if (t <= currentTime) {
         // 气泡半径曲线
         const giR = getGIGunBubbleRadius(t)
         const singleR = getSingleGunBubbleRadius(t)
@@ -192,8 +213,8 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
         // 压力曲线
         const giP = getGIPressure(t)
         const singleP = getSingleGunPressure(t)
-        const yGiP = 155 - giP * 45
-        const ySingleP = 155 - singleP * 45
+        const yGiP = 145 - giP * 38
+        const ySingleP = 145 - singleP * 38
         
         giPressurePoints.push(`${i === 0 ? 'M' : 'L'}${x},${yGiP}`)
         singlePressurePoints.push(`${i === 0 ? 'M' : 'L'}${x},${ySingleP}`)
@@ -236,7 +257,7 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
                 <stop offset="60%" stopColor="#22d3ee" />
                 <stop offset="100%" stopColor="#0891b2" />
               </radialGradient>
-              <filter id="glow">
+              <filter id="bubbleGlow">
                 <feGaussianBlur stdDeviation="2" result="blur"/>
                 <feMerge>
                   <feMergeNode in="blur"/>
@@ -259,7 +280,7 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
               r={currentState.giRadius * 45}
               fill="url(#giBubbleGrad)"
               opacity="0.75"
-              filter="url(#glow)"
+              filter="url(#bubbleGlow)"
             />
             {currentState.giRadius > 0.2 && (
               <ellipse 
@@ -382,7 +403,7 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
           
           {/* 网格线 */}
           <g opacity="0.3">
-            {[25, 45, 65].map((y) => (
+            {[25, 50].map((y) => (
               <line key={y} x1="30" y1={y} x2="230" y2={y} stroke="#475569" strokeWidth="0.5" />
             ))}
           </g>
@@ -416,9 +437,9 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
           />
           
           {/* Y轴标签 */}
-          <text x="25" y="25" textAnchor="end" fill="#64748b" fontSize="7">1.0</text>
-          <text x="25" y="50" textAnchor="end" fill="#64748b" fontSize="7">0.5</text>
-          <text x="25" y="73" textAnchor="end" fill="#64748b" fontSize="7">0</text>
+          <text x="25" y="27" textAnchor="end" fill="#64748b" fontSize="7">1.0</text>
+          <text x="25" y="52" textAnchor="end" fill="#64748b" fontSize="7">0.5</text>
+          <text x="25" y="77" textAnchor="end" fill="#64748b" fontSize="7">0</text>
           
           {/* === 下半部分：压力脉冲曲线 === */}
           <text x="130" y="95" textAnchor="middle" fill="#94a3b8" fontSize="9">
@@ -446,8 +467,9 @@ export function BubbleDynamics({ phase }: BubbleDynamicsProps) {
             主脉冲
           </text>
           
-          {/* 零线 */}
-          <line x1="30" y1="155" x2="230" y2="155" stroke="#475569" strokeWidth="0.5" />
+          {/* 零线（静水压） - 下方为负压 */}
+          <line x1="30" y1="145" x2="230" y2="145" stroke="#475569" strokeWidth="0.5" />
+          <text x="25" y="147" textAnchor="end" fill="#64748b" fontSize="7">0</text>
           
           {/* 坐标轴 */}
           <line x1="30" y1="160" x2="230" y2="160" stroke="#64748b" strokeWidth="1" />

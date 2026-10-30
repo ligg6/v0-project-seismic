@@ -267,7 +267,7 @@ export function WaveformDisplay({ phase }: WaveformDisplayProps) {
       
       {/* 物理原理提示 */}
       <div className="mt-2 pt-2 border-t border-slate-700 text-center text-xs text-slate-500">
-        振荡脉冲产生于气泡<span className="text-amber-400">坍缩到最小体积时的急剧反弹</span>，周期T与气枪容量、水深相关
+        振荡脉冲产生于气泡<span className="text-amber-400">坍缩到最小体积时的急剧反弹</span>，周期T与气枪容量、工作压力及气枪沉放深度相关
       </div>
     </div>
   )

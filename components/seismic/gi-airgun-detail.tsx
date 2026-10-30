@@ -59,7 +59,7 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
     
     // 后续：平稳衰减
     const decayTime = currentTime - T
-    return Math.max(0.2, 0.85 * Math.exp(-decayTime / 120) + 0.15)
+    return Math.max(0.2, 0.70 * Math.exp(-decayTime / 120) + 0.15) // t=T 时为0.85，与收缩段末端连续
   }
 
   const generatorPressure = getGeneratorPressure()
@@ -171,7 +171,7 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
             <stop offset="0%" stopColor="#0369a1" stopOpacity="0.3" />
             <stop offset="100%" stopColor="#0c4a6e" stopOpacity="0.5" />
           </linearGradient>
-          <filter id="glow">
+          <filter id="giDetailGlow">
             <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
@@ -262,7 +262,7 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
               cy={185 + (1 - bubbleRadius) * 15} 
               r={15 + bubbleRadius * 45} 
               fill="url(#bubbleGradient)"
-              filter="url(#glow)"
+              filter="url(#giDetailGlow)"
             />
             {/* 气泡内部高光 */}
             <ellipse 
@@ -353,13 +353,13 @@ export function GIAirgunDetail({ phase }: GIAirgunDetailProps) {
                 stroke="#fbbf24" strokeWidth="2" />
         </g>
         
-        {/* 振荡脉冲标记 - 在t=50,100,150ms时显示 */}
+        {/* 振荡脉冲标记 - 在t=50,100,150ms时显示（位于气枪右下方，不遮挡Injector腔） */}
         {[T, T * 2, T * 3].map((oscT, idx) => {
           if (isNearOscillation(oscT)) {
             return (
               <g key={oscT} opacity={1 - Math.abs(currentTime - oscT) / 8}>
-                <rect x="280" y={65 + idx * 25} width="110" height="22" rx="4" fill="rgba(239, 68, 68, 0.2)" stroke="#ef4444" strokeWidth="1" />
-                <text x="335" y={80 + idx * 25} textAnchor="middle" fill="#ef4444" fontSize="9">
+                <rect x="280" y={165 + idx * 25} width="110" height="22" rx="4" fill="rgba(239, 68, 68, 0.2)" stroke="#ef4444" strokeWidth="1" />
+                <text x="335" y={180 + idx * 25} textAnchor="middle" fill="#ef4444" fontSize="9">
                   单腔振荡{idx + 1} (t={oscT}ms)
                 </text>
               </g>
