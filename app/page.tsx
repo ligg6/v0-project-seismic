@@ -130,7 +130,7 @@ export default function SeismicSurveySimulation() {
                 <h5 className="text-cyan-300 text-sm font-medium mb-2">关键优势</h5>
                 <ul className="text-xs text-slate-400 space-y-1">
                   <li>• 消除气泡振荡脉冲，获得锐利地震子波</li>
-                  <li>• 提高浅层分辨率，减少多次波干扰</li>
+                  <li>• 提高浅层分辨率，减少气泡振荡干扰</li>
                   <li>• 适合浅水环境勘探（水深{60}m级别）</li>
                   <li>• 体积小巧，便于多枪组合使用</li>
                 </ul>
@@ -149,45 +149,46 @@ export default function SeismicSurveySimulation() {
             {/* 时间线 */}
             <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-green-500 via-yellow-500 via-purple-500 to-cyan-500 transition-all duration-100"
+                className="h-full bg-[linear-gradient(to_right,var(--color-green-500),var(--color-yellow-500),var(--color-purple-500),var(--color-cyan-500))] transition-all duration-100"
                 style={{ width: `${phase}%` }}
               />
             </div>
             
-            {/* 阶段标记 - 基于50ms气泡周期 */}
-            <div className="flex justify-between mt-4 text-xs">
-              <div className={`text-center ${phase >= 0 ? 'text-green-400' : 'text-slate-500'}`}>
-                <div className="w-3 h-3 rounded-full bg-green-500 mx-auto mb-1" />
+            {/* 阶段标记 - 基于50ms气泡周期，位置 left = t/200ms，与进度条对齐 */}
+            <div className="relative h-36 sm:h-24 mt-4 text-[10px] sm:text-xs">
+              <div style={{ left: "0%" }} className={`absolute whitespace-nowrap text-left ${phase >= 0 ? 'text-green-400' : 'text-slate-500'}`}>
+                <div className="w-3 h-3 rounded-full bg-green-500 mb-1" />
                 <p className="font-medium">0ms</p>
                 <p>主脉冲</p>
                 <p className="text-slate-500">G放气</p>
               </div>
-              <div className={`text-center ${phase >= 12 ? 'text-yellow-400' : 'text-slate-500'}`}>
+              <div style={{ left: "12.5%" }} className={`absolute -translate-x-1/2 whitespace-nowrap text-center ${phase >= 12 ? 'text-yellow-400' : 'text-slate-500'}`}>
                 <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 12 ? 'bg-yellow-500' : 'bg-slate-600'}`} />
+                <div className="h-14 w-px bg-slate-600 mx-auto sm:hidden" />
                 <p className="font-medium">~25ms</p>
                 <p>气泡最大</p>
                 <p className="text-slate-500">I注气</p>
               </div>
-              <div className={`text-center ${phase >= 25 ? 'text-red-400' : 'text-slate-500'}`}>
+              <div style={{ left: "25%" }} className={`absolute -translate-x-1/2 whitespace-nowrap text-center ${phase >= 25 ? 'text-red-400' : 'text-slate-500'}`}>
                 <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 25 ? 'bg-red-500' : 'bg-slate-600'}`} />
                 <p className="font-medium">~50ms</p>
                 <p>振荡1</p>
                 <p className="text-slate-500">坍缩反弹</p>
               </div>
-              <div className={`text-center ${phase >= 50 ? 'text-orange-400' : 'text-slate-500'}`}>
+              <div style={{ left: "50%" }} className={`absolute -translate-x-1/2 whitespace-nowrap text-center ${phase >= 50 ? 'text-orange-400' : 'text-slate-500'}`}>
                 <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 50 ? 'bg-orange-500' : 'bg-slate-600'}`} />
                 <p className="font-medium">~100ms</p>
                 <p>振荡2</p>
                 <p className="text-slate-500">第2周期</p>
               </div>
-              <div className={`text-center ${phase >= 75 ? 'text-purple-400' : 'text-slate-500'}`}>
+              <div style={{ left: "75%" }} className={`absolute -translate-x-1/2 whitespace-nowrap text-center ${phase >= 75 ? 'text-purple-400' : 'text-slate-500'}`}>
                 <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 75 ? 'bg-purple-500' : 'bg-slate-600'}`} />
                 <p className="font-medium">~150ms</p>
                 <p>振荡3</p>
                 <p className="text-slate-500">第3周期</p>
               </div>
-              <div className={`text-center ${phase >= 95 ? 'text-cyan-400' : 'text-slate-500'}`}>
-                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${phase >= 95 ? 'bg-cyan-500' : 'bg-slate-600'}`} />
+              <div style={{ left: "100%" }} className={`absolute -translate-x-full whitespace-nowrap text-right ${phase >= 95 ? 'text-cyan-400' : 'text-slate-500'}`}>
+                <div className={`w-3 h-3 rounded-full ml-auto mb-1 ${phase >= 95 ? 'bg-cyan-500' : 'bg-slate-600'}`} />
                 <p className="font-medium">~200ms</p>
                 <p>衰减</p>
                 <p className="text-slate-500">能量耗散</p>
